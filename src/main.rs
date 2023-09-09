@@ -1,5 +1,6 @@
 use bevy::{core_pipeline::clear_color::ClearColorConfig, prelude::*, window::PrimaryWindow};
 use player::Player;
+use rand::prelude::*;
 use resource::Money;
 
 use crate::pig::Pig;
@@ -8,32 +9,35 @@ mod pig;
 mod player;
 mod resource;
 
-const PLAYER_SIZE: (f32, f32) = (320.0 / 4.0, 370.0 / 4.0);
+pub const PLAYER_SIZE: (f32, f32) = (320.0 / 5.0, 370.0 / 5.0);
+pub const PIG_SIZE: (f32, f32) = (947.0 / 16.0, 772.0 / 16.0);
+pub const PIG_NUMS: i32 = 10;
+pub const PIG_SPEED: f32 = 40.0;
 
 fn main() {
+    let default_plugins = DefaultPlugins
+        .set(ImagePlugin::default_nearest())
+        .set(WindowPlugin {
+            primary_window: Some(Window {
+                title: "Logic Farming Rougelike".into(),
+                resolution: (640.0, 480.0).into(),
+                resizable: false,
+                ..default()
+            }),
+            ..default()
+        });
+
     App::new()
-        .add_plugins(
-            DefaultPlugins
-                .set(ImagePlugin::default_nearest())
-                .set(WindowPlugin {
-                    primary_window: Some(Window {
-                        title: "Logic Farming Rougelike".into(),
-                        resolution: (640.0, 480.0).into(),
-                        resizable: false,
-                        ..default()
-                    }),
-                    ..default()
-                }),
-        )
-        .insert_resource(Money(100.0))
-        .add_systems(Startup, setup)
+        .add_plugins(default_plugins)
+        .init_resource::<Money>()
+        .add_systems(Startup, (setup, spawn_pigs))
         .add_systems(
             Update,
             (
                 player_movement,
                 confine_player_movement,
-                spawn_pig,
-                pig_lifetime,
+                pigs_movement,
+                confine_pigs_movement,
             ),
         )
         .run();
@@ -127,45 +131,38 @@ fn confine_player_movement(
     }
 }
 
-pub fn spawn_pig(
+fn spawn_pigs(
     mut commands: Commands,
     assert_server: Res<AssetServer>,
-    input: Res<Input<KeyCode>>,
-    mut money: ResMut<Money>,
-    player: Query<&Transform, With<Player>>,
+    window_query: Query<&Window, With<PrimaryWindow>>,
 ) {
-    if !input.just_pressed(KeyCode::Space) {
-        return;
-    }
+    let window = window_query.single();
+    let width = window.width();
+    let height = window.height();
 
-    let player = player.single();
-    let cost = 10.0;
+    for _ in 0..PIG_NUMS {
+        let mut rng = thread_rng();
 
-    if money.0 >= cost {
-        money.0 -= cost;
-
-        info!(
-            "Spent ${:?} on a pig, remaining money: ${:?}",
-            cost, money.0
-        );
-
-        let texture = assert_server.load("pig.png");
+        let rand_x = rng.gen_range(0.0..width);
+        let rand_y = rng.gen_range(0.0..height);
 
         let pig = SpriteBundle {
             sprite: Sprite {
-                custom_size: Some(Vec2::new(90.0, 70.0)),
+                custom_size: Some(Vec2::new(PIG_SIZE.0, PIG_SIZE.1)),
                 ..default()
             },
-            texture,
-            transform: *player,
+            texture: assert_server.load("pig.png"),
+            transform: Transform::from_xyz(rand_x, rand_y, 0.0),
             ..default()
         };
 
         commands.spawn((pig, Pig::new(2.0, 1.5)));
     }
+
+    info!("Spent {} pigs", PIG_NUMS);
 }
 
-fn pig_lifetime(
+fn _pig_lifetime(
     mut commands: Commands,
     time: Res<Time>,
     mut pigs: Query<(Entity, &mut Pig)>,
@@ -185,5 +182,43 @@ fn pig_lifetime(
                 money.0
             )
         }
+    }
+}
+
+fn pigs_movement(mut pig_query: Query<(&mut Transform, &Pig), With<Pig>>, time: Res<Time>) {
+    for (mut transform, pig) in pig_query.iter_mut() {
+        transform.translation += pig.direction * PIG_SPEED * time.delta_seconds();
+    }
+}
+
+fn confine_pigs_movement(
+    mut pig_query: Query<(&mut Transform, &mut Pig), With<Pig>>,
+    window_query: Query<&Window, With<PrimaryWindow>>,
+) {
+    let window = window_query.single();
+    let x_min = 0.0 + PIG_SIZE.0 / 2.0;
+    let x_max = window.width() - PIG_SIZE.0 / 2.0;
+    let y_min = 0.0 + PIG_SIZE.1 / 2.0;
+    let y_max = window.height() - PIG_SIZE.1 / 2.0;
+
+    for (mut transform, mut pig) in pig_query.iter_mut() {
+        let mut translation = transform.translation;
+        if translation.x < x_min {
+            translation.x = x_min;
+            pig.direction.x = -pig.direction.x;
+        } else if translation.x > x_max {
+            translation.x = x_max;
+            pig.direction.x = -pig.direction.x;
+        }
+
+        if translation.y < y_min {
+            translation.y = y_min;
+            pig.direction.y = -pig.direction.y;
+        } else if translation.y > y_max {
+            translation.y = y_max;
+            pig.direction.y = -pig.direction.y;
+        }
+
+        transform.translation = translation;
     }
 }
