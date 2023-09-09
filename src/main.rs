@@ -1,17 +1,19 @@
+use crate::{pig::Pig, star::Star};
 use bevy::{core_pipeline::clear_color::ClearColorConfig, prelude::*, window::PrimaryWindow};
 use player::Player;
 use rand::prelude::*;
-use resource::Money;
-
-use crate::pig::Pig;
+use resource::{Money, StarSpawnTimer};
 
 mod pig;
 mod player;
 mod resource;
+mod star;
 
 pub const PLAYER_SIZE: (f32, f32) = (320.0 / 5.0, 370.0 / 5.0);
 pub const PIG_SIZE: (f32, f32) = (947.0 / 16.0, 772.0 / 16.0);
-pub const PIG_NUMS: i32 = 10;
+pub const STAR_SIZE: (f32, f32) = (30.0 / 2.0, 30.0 / 2.0);
+pub const PIG_NUMS: i32 = 5;
+pub const STAR_NUMS: i32 = 10;
 pub const PIG_SPEED: f32 = 40.0;
 
 fn main() {
@@ -30,7 +32,8 @@ fn main() {
     App::new()
         .add_plugins(default_plugins)
         .init_resource::<Money>()
-        .add_systems(Startup, (setup, spawn_pigs))
+        .init_resource::<StarSpawnTimer>()
+        .add_systems(Startup, (setup, spawn_pigs, spawn_stars))
         .add_systems(
             Update,
             (
@@ -38,6 +41,10 @@ fn main() {
                 confine_player_movement,
                 pigs_movement,
                 confine_pigs_movement,
+                pigs_hit_player,
+                get_star,
+                tick_star_spawn_timer,
+                spawn_star_over_time,
             ),
         )
         .run();
@@ -162,26 +169,32 @@ fn spawn_pigs(
     info!("Spent {} pigs", PIG_NUMS);
 }
 
-fn _pig_lifetime(
+fn spawn_stars(
     mut commands: Commands,
-    time: Res<Time>,
-    mut pigs: Query<(Entity, &mut Pig)>,
-    mut money: ResMut<Money>,
+    assert_server: Res<AssetServer>,
+    window_query: Query<&Window, With<PrimaryWindow>>,
 ) {
-    for (pig_entity, mut pig) in &mut pigs {
-        pig.lifetime.tick(time.delta());
+    let window = window_query.single();
+    let width = window.width();
+    let height = window.height();
 
-        if pig.lifetime.finished() {
-            money.0 += 10.0 * pig.rate;
+    for _ in 0..STAR_NUMS {
+        let mut rng = thread_rng();
 
-            commands.entity(pig_entity).despawn();
+        let rand_x = rng.gen_range(STAR_SIZE.0 / 2.0..width - STAR_SIZE.0 / 2.0);
+        let rand_y = rng.gen_range(STAR_SIZE.1 / 2.0..height - STAR_SIZE.1 / 2.0);
 
-            info!(
-                "Pig sold for ${}! Current Money: ${:?}",
-                10.0 * pig.rate,
-                money.0
-            )
-        }
+        let star = SpriteBundle {
+            sprite: Sprite {
+                custom_size: Some(Vec2::new(STAR_SIZE.0, STAR_SIZE.1)),
+                ..default()
+            },
+            texture: assert_server.load("star.png"),
+            transform: Transform::from_xyz(rand_x, rand_y, 0.0),
+            ..default()
+        };
+
+        commands.spawn((star, Star::new()));
     }
 }
 
@@ -203,6 +216,7 @@ fn confine_pigs_movement(
 
     for (mut transform, mut pig) in pig_query.iter_mut() {
         let mut translation = transform.translation;
+
         if translation.x < x_min {
             translation.x = x_min;
             pig.direction.x = -pig.direction.x;
@@ -221,4 +235,84 @@ fn confine_pigs_movement(
 
         transform.translation = translation;
     }
+}
+
+fn pigs_hit_player(
+    player_query: Query<&Transform, With<Player>>,
+    mut pigs_query: Query<(&Transform, &mut Pig), With<Pig>>,
+    mut commands: Commands,
+    asset_server: Res<AssetServer>,
+) {
+    if let Ok(player) = player_query.get_single() {
+        for (pig_transform, mut pig) in pigs_query.iter_mut() {
+            let distance = player.translation.distance(pig_transform.translation);
+            if distance < (PLAYER_SIZE.0 + PIG_SIZE.0) / 2.0 {
+                info!("booom");
+                commands.spawn(AudioBundle {
+                    source: asset_server.load("audio/pluck_002.ogg"),
+                    ..default()
+                });
+                pig.direction = -pig.direction;
+            }
+        }
+    }
+}
+
+fn get_star(
+    player_query: Query<&Transform, With<Player>>,
+    stars_query: Query<(Entity, &Transform), With<Star>>,
+    mut commands: Commands,
+    mut money: ResMut<Money>,
+    asset_server: Res<AssetServer>,
+) {
+    if let Ok(player) = player_query.get_single() {
+        for (star_entity, star) in stars_query.iter() {
+            let distance = player.translation.distance(star.translation);
+            if distance < (PLAYER_SIZE.0 + STAR_SIZE.0) / 2.0 {
+                commands.entity(star_entity).despawn();
+                money.0 += 10.0;
+                info!("Got a star! Current Money: ${:?}", money.0);
+                commands.spawn(AudioBundle {
+                    source: asset_server.load("audio/pluck_001.ogg"),
+                    ..default()
+                });
+            }
+        }
+    }
+}
+
+fn spawn_star_over_time(
+    mut commands: Commands,
+    assert_server: Res<AssetServer>,
+    window_query: Query<&Window, With<PrimaryWindow>>,
+    star_spawn_timer: Res<StarSpawnTimer>,
+) {
+    if !star_spawn_timer.timer.finished() {
+        return;
+    }
+
+    let window = window_query.single();
+    let width = window.width();
+    let height = window.height();
+
+    let mut rng = thread_rng();
+
+    let rand_x = rng.gen_range(STAR_SIZE.0 / 2.0..width - STAR_SIZE.0 / 2.0);
+    let rand_y = rng.gen_range(STAR_SIZE.1 / 2.0..height - STAR_SIZE.1 / 2.0);
+
+    let star = SpriteBundle {
+        sprite: Sprite {
+            custom_size: Some(Vec2::new(STAR_SIZE.0, STAR_SIZE.1)),
+            ..default()
+        },
+        texture: assert_server.load("star.png"),
+        transform: Transform::from_xyz(rand_x, rand_y, 0.0),
+        ..default()
+    };
+
+    commands.spawn((star, Star::new()));
+}
+
+fn tick_star_spawn_timer(mut star_spawn_timer: ResMut<StarSpawnTimer>, time: Res<Time>) {
+    star_spawn_timer.timer.tick(time.delta());
 }
