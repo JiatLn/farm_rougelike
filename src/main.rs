@@ -1,4 +1,4 @@
-use bevy::{core_pipeline::clear_color::ClearColorConfig, prelude::*};
+use bevy::{core_pipeline::clear_color::ClearColorConfig, prelude::*, window::PrimaryWindow};
 use player::Player;
 use resource::Money;
 
@@ -7,6 +7,8 @@ use crate::pig::Pig;
 mod pig;
 mod player;
 mod resource;
+
+const PLAYER_SIZE: (f32, f32) = (320.0 / 4.0, 370.0 / 4.0);
 
 fn main() {
     App::new()
@@ -25,15 +27,29 @@ fn main() {
         )
         .insert_resource(Money(100.0))
         .add_systems(Startup, setup)
-        .add_systems(Update, (character_movement, spawn_pig, pig_lifetime))
+        .add_systems(
+            Update,
+            (
+                player_movement,
+                confine_player_movement,
+                spawn_pig,
+                pig_lifetime,
+            ),
+        )
         .run();
 }
 
-fn setup(mut commands: Commands, asset_server: Res<AssetServer>) {
+fn setup(
+    mut commands: Commands,
+    asset_server: Res<AssetServer>,
+    window_query: Query<&Window, With<PrimaryWindow>>,
+) {
+    let window = window_query.single();
     let camera = Camera2dBundle {
         camera_2d: Camera2d {
             clear_color: ClearColorConfig::Custom(Color::hex("#282a36").unwrap()),
         },
+        transform: Transform::from_xyz(window.width() / 2.0, window.height() / 2.0, 0.0),
         ..default()
     };
     commands.spawn(camera);
@@ -42,36 +58,72 @@ fn setup(mut commands: Commands, asset_server: Res<AssetServer>) {
 
     let sprite = SpriteBundle {
         sprite: Sprite {
-            custom_size: Some(Vec2::new(100.0, 100.0)),
+            custom_size: Some(Vec2::new(PLAYER_SIZE.0, PLAYER_SIZE.1)),
             ..default()
         },
         texture,
+        transform: Transform::from_xyz(window.width() / 2.0, window.height() / 2.0, 0.0),
         ..default()
     };
 
-    commands.spawn((sprite, Player::new(100.0)));
+    commands.spawn((sprite, Player::new(300.0)));
 }
 
-fn character_movement(
-    mut characters: Query<(&mut Transform, &Player)>,
-    input: Res<Input<KeyCode>>,
+fn player_movement(
+    mut player_query: Query<(&mut Transform, &Player)>,
+    keyboard_input: Res<Input<KeyCode>>,
     time: Res<Time>,
 ) {
-    for (mut transform, player) in &mut characters {
-        let movement_amount = player.speed * time.delta_seconds();
+    if let Ok((mut transform, player)) = player_query.get_single_mut() {
+        let mut direction = Vec3::ZERO;
 
-        if input.pressed(KeyCode::W) {
-            transform.translation.y += movement_amount;
+        if keyboard_input.pressed(KeyCode::W) || keyboard_input.pressed(KeyCode::Up) {
+            direction += Vec3::new(0.0, 1.0, 0.0);
         }
-        if input.pressed(KeyCode::S) {
-            transform.translation.y -= movement_amount;
+        if keyboard_input.pressed(KeyCode::S) || keyboard_input.pressed(KeyCode::Down) {
+            direction += Vec3::new(0.0, -1.0, 0.0);
         }
-        if input.pressed(KeyCode::A) {
-            transform.translation.x -= movement_amount;
+        if keyboard_input.pressed(KeyCode::A) || keyboard_input.pressed(KeyCode::Left) {
+            direction += Vec3::new(-1.0, 0.0, 0.0);
         }
-        if input.pressed(KeyCode::D) {
-            transform.translation.x += movement_amount;
+        if keyboard_input.pressed(KeyCode::D) || keyboard_input.pressed(KeyCode::Right) {
+            direction += Vec3::new(1.0, 0.0, 0.0);
         }
+
+        if direction.length() > 0.0 {
+            direction = direction.normalize();
+        }
+
+        transform.translation += direction * player.speed * time.delta_seconds();
+    }
+}
+
+fn confine_player_movement(
+    mut player_query: Query<&mut Transform, With<Player>>,
+    window_query: Query<&Window, With<PrimaryWindow>>,
+) {
+    let window = window_query.single();
+    let x_min = 0.0 + PLAYER_SIZE.0 / 2.0;
+    let x_max = window.width() - PLAYER_SIZE.0 / 2.0;
+    let y_min = 0.0 + PLAYER_SIZE.1 / 2.0;
+    let y_max = window.height() - PLAYER_SIZE.1 / 2.0;
+
+    if let Ok(mut palyer_transform) = player_query.get_single_mut() {
+        let mut transition = palyer_transform.translation;
+
+        if transition.x < x_min {
+            transition.x = x_min
+        } else if transition.x > x_max {
+            transition.x = x_max
+        }
+
+        if transition.y < y_min {
+            transition.y = y_min
+        } else if transition.y > y_max {
+            transition.y = y_max
+        }
+
+        palyer_transform.translation = transition;
     }
 }
 
