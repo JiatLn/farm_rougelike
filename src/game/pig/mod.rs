@@ -1,6 +1,10 @@
 use bevy::prelude::*;
 use rand::prelude::*;
 
+use crate::AppState;
+
+use super::SimulationState;
+
 pub const PIG_SIZE: (f32, f32) = (947.0 / 16.0, 772.0 / 16.0);
 pub const PIG_NUMS: i32 = 5;
 pub const PIG_SPEED: f32 = 40.0;
@@ -38,9 +42,13 @@ pub struct PigPlugin;
 
 impl Plugin for PigPlugin {
     fn build(&self, app: &mut App) {
-        app.add_systems(Startup, systems::spawn_pigs).add_systems(
-            Update,
-            (systems::pigs_movement, systems::confine_pigs_movement),
-        );
+        app.add_systems(OnEnter(AppState::Game), systems::spawn_pigs)
+            .add_systems(OnExit(AppState::Game), systems::despawn_pigs)
+            .add_systems(
+                Update,
+                (systems::pigs_movement, systems::confine_pigs_movement)
+                    .run_if(in_state(AppState::Game))
+                    .run_if(in_state(SimulationState::Running)),
+            );
     }
 }

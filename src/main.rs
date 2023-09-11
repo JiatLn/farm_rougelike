@@ -1,5 +1,4 @@
 use bevy::prelude::*;
-use events::GameOver;
 use game::GamePlugin;
 use main_menu::MainMenuPlugin;
 
@@ -24,13 +23,26 @@ fn main() {
 
     App::new()
         .add_plugins(default_plugins)
+        .add_state::<AppState>()
         .add_plugins(MainMenuPlugin)
         .add_plugins(GamePlugin)
-        .add_event::<GameOver>()
         .add_systems(Startup, systems::setup)
         .add_systems(
             Update,
-            (systems::handler_game_over, systems::update_high_scores),
+            (
+                systems::handler_game_over,
+                systems::update_high_scores,
+                systems::transition_to_game_state,
+                systems::transition_to_main_menu_state,
+            ),
         )
         .run();
+}
+
+#[derive(States, Debug, Clone, Copy, PartialEq, Eq, Hash, Default)]
+pub enum AppState {
+    #[default]
+    MainMenu,
+    Game,
+    GameOver,
 }

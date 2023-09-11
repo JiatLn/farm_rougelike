@@ -73,3 +73,9 @@ pub fn confine_pigs_movement(
         transform.translation = translation;
     }
 }
+
+pub fn despawn_pigs(mut commands: Commands, pig_query: Query<Entity, With<Pig>>) {
+    for pig in pig_query.iter() {
+        commands.entity(pig).despawn();
+    }
+}
