@@ -1,15 +1,11 @@
 use bevy::prelude::*;
 use events::GameOver;
-use pig::PigPlugin;
-use player::PlayerPlugin;
+use game::GamePlugin;
 use resources::{HighScores, Score, StarSpawnTimer};
-use star::StarPlugin;
 
 mod events;
-mod pig;
-mod player;
+mod game;
 mod resources;
-mod star;
 mod systems;
 
 fn main() {
@@ -36,6 +32,6 @@ fn main() {
             Update,
             (systems::handler_game_over, systems::update_high_scores),
         )
-        .add_plugins((PlayerPlugin, PigPlugin, StarPlugin))
+        .add_plugins(GamePlugin)
         .run();
 }

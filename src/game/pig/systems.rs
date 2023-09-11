@@ -1,4 +1,4 @@
-use crate::pig::{Pig, PIG_NUMS, PIG_SIZE};
+use crate::game::pig::{Pig, PIG_NUMS, PIG_SIZE};
 use bevy::{prelude::*, window::PrimaryWindow};
 use rand::prelude::*;
 

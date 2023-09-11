@@ -1,9 +1,9 @@
 use super::{Player, PLAYER_SIZE};
 use crate::{
     events::GameOver,
-    pig::{Pig, PIG_SIZE},
+    game::pig::{Pig, PIG_SIZE},
+    game::star::{Star, STAR_SIZE},
     resources::Score,
-    star::{Star, STAR_SIZE},
 };
 use bevy::{prelude::*, window::PrimaryWindow};
 
