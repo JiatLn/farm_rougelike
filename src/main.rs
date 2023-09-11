@@ -1,10 +1,11 @@
 use bevy::prelude::*;
 use events::GameOver;
 use game::GamePlugin;
-use resources::{HighScores, Score, StarSpawnTimer};
+use main_menu::MainMenuPlugin;
 
 mod events;
 mod game;
+mod main_menu;
 mod resources;
 mod systems;
 
@@ -23,15 +24,13 @@ fn main() {
 
     App::new()
         .add_plugins(default_plugins)
+        .add_plugins(MainMenuPlugin)
+        .add_plugins(GamePlugin)
         .add_event::<GameOver>()
-        .init_resource::<Score>()
-        .init_resource::<HighScores>()
-        .init_resource::<StarSpawnTimer>()
         .add_systems(Startup, systems::setup)
         .add_systems(
             Update,
             (systems::handler_game_over, systems::update_high_scores),
         )
-        .add_plugins(GamePlugin)
         .run();
 }
