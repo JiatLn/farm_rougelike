@@ -13,10 +13,14 @@ pub fn setup(mut commands: Commands, window_query: Query<&Window, With<PrimaryWi
     commands.spawn(camera);
 }
 
-pub fn handler_game_over(mut game_over_event_reader: EventReader<GameOver>) {
+pub fn handler_game_over(
+    mut game_over_event_reader: EventReader<GameOver>,
+    mut commands: Commands,
+) {
     for event in game_over_event_reader.iter() {
         info!("Booom!!! Game over!");
-        info!("Your final score is {}.", event.score)
+        info!("Your final score is {}.", event.score);
+        commands.insert_resource(NextState(Some(AppState::GameOver)));
     }
 }
 
@@ -39,7 +43,7 @@ pub fn transition_to_game_state(
 ) {
     if kb_input.just_pressed(KeyCode::G) && app_state.get() != &AppState::Game {
         commands.insert_resource(NextState(Some(AppState::Game)));
-        commands.insert_resource(NextState(Some(SimulationState::Paused)));
+        commands.insert_resource(NextState(Some(SimulationState::Running)));
         info!("Entered AppState::Game");
     }
 }
