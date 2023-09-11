@@ -1,14 +1,16 @@
 use bevy::prelude::*;
+use events::GameOver;
 use pig::PigPlugin;
 use player::PlayerPlugin;
-use resource::{Money, StarSpawnTimer};
+use resources::{HighScores, Score, StarSpawnTimer};
 use star::StarPlugin;
 
+mod events;
 mod pig;
 mod player;
-mod resource;
+mod resources;
 mod star;
-mod system;
+mod systems;
 
 fn main() {
     let default_plugins = DefaultPlugins
@@ -25,9 +27,15 @@ fn main() {
 
     App::new()
         .add_plugins(default_plugins)
-        .init_resource::<Money>()
+        .add_event::<GameOver>()
+        .init_resource::<Score>()
+        .init_resource::<HighScores>()
         .init_resource::<StarSpawnTimer>()
-        .add_systems(Startup, system::setup)
+        .add_systems(Startup, systems::setup)
+        .add_systems(
+            Update,
+            (systems::handler_game_over, systems::update_high_scores),
+        )
         .add_plugins((PlayerPlugin, PigPlugin, StarPlugin))
         .run();
 }

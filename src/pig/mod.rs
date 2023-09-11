@@ -5,7 +5,7 @@ pub const PIG_SIZE: (f32, f32) = (947.0 / 16.0, 772.0 / 16.0);
 pub const PIG_NUMS: i32 = 5;
 pub const PIG_SPEED: f32 = 40.0;
 
-mod system;
+mod systems;
 
 #[derive(Component)]
 pub struct Pig {
@@ -38,9 +38,9 @@ pub struct PigPlugin;
 
 impl Plugin for PigPlugin {
     fn build(&self, app: &mut App) {
-        app.add_systems(Startup, system::spawn_pigs).add_systems(
+        app.add_systems(Startup, systems::spawn_pigs).add_systems(
             Update,
-            (system::pigs_movement, system::confine_pigs_movement),
+            (systems::pigs_movement, systems::confine_pigs_movement),
         );
     }
 }

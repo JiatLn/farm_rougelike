@@ -1,7 +1,8 @@
 use super::{Player, PLAYER_SIZE};
 use crate::{
+    events::GameOver,
     pig::{Pig, PIG_SIZE},
-    resource::Money,
+    resources::Score,
     star::{Star, STAR_SIZE},
 };
 use bevy::{prelude::*, window::PrimaryWindow};
@@ -83,11 +84,11 @@ pub fn confine_player_movement(
     }
 }
 
-pub fn get_star(
+pub fn collect_star(
     player_query: Query<&Transform, With<Player>>,
     stars_query: Query<(Entity, &Transform), With<Star>>,
     mut commands: Commands,
-    mut money: ResMut<Money>,
+    mut score: ResMut<Score>,
     asset_server: Res<AssetServer>,
 ) {
     if let Ok(player) = player_query.get_single() {
@@ -95,8 +96,8 @@ pub fn get_star(
             let distance = player.translation.distance(star.translation);
             if distance < (PLAYER_SIZE.0 + STAR_SIZE.0) / 2.0 {
                 commands.entity(star_entity).despawn();
-                money.0 += 10.0;
-                info!("Got a star! Current Money: ${:?}", money.0);
+                score.0 += 1;
+                info!("Collected a star! Current score: {}", score.0);
                 commands.spawn(AudioBundle {
                     source: asset_server.load("audio/pluck_001.ogg"),
                     ..default()
@@ -106,22 +107,33 @@ pub fn get_star(
     }
 }
 
-pub fn pigs_hit_player(
-    player_query: Query<&Transform, With<Player>>,
+pub fn pig_hit_player(
+    player_query: Query<(Entity, &Transform), With<Player>>,
     mut pigs_query: Query<(&Transform, &mut Pig), With<Pig>>,
     mut commands: Commands,
     asset_server: Res<AssetServer>,
+    mut game_over_event_writer: EventWriter<GameOver>,
+    score: Res<Score>,
 ) {
-    if let Ok(player) = player_query.get_single() {
+    // for protect player first init dead immediately.
+    if score.0 == 0 {
+        return;
+    }
+
+    if let Ok((player_entity, player_transform)) = player_query.get_single() {
         for (pig_transform, mut pig) in pigs_query.iter_mut() {
-            let distance = player.translation.distance(pig_transform.translation);
+            let distance = player_transform
+                .translation
+                .distance(pig_transform.translation);
             if distance < (PLAYER_SIZE.0 + PIG_SIZE.0) / 2.0 {
-                info!("booom");
                 commands.spawn(AudioBundle {
                     source: asset_server.load("audio/pluck_002.ogg"),
                     ..default()
                 });
                 pig.direction = -pig.direction;
+                commands.entity(player_entity).despawn();
+                game_over_event_writer.send(GameOver { score: score.0 });
+                break;
             }
         }
     }

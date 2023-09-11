@@ -1,5 +1,5 @@
 use super::{Star, STAR_NUMS, STAR_SIZE};
-use crate::resource::StarSpawnTimer;
+use crate::resources::StarSpawnTimer;
 use bevy::{prelude::*, window::PrimaryWindow};
 use rand::prelude::*;
 

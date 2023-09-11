@@ -4,11 +4,22 @@ use bevy::{
 };
 
 #[derive(Resource)]
-pub struct Money(pub f32);
+pub struct Score(pub i32);
 
-impl Default for Money {
+impl Default for Score {
     fn default() -> Self {
-        Money(0.0)
+        Score(0)
+    }
+}
+
+#[derive(Resource, Debug)]
+pub struct HighScores {
+    pub scores: Vec<i32>,
+}
+
+impl Default for HighScores {
+    fn default() -> Self {
+        HighScores { scores: vec![] }
     }
 }
 

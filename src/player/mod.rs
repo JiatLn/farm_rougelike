@@ -1,6 +1,6 @@
 use bevy::prelude::*;
 
-mod system;
+mod systems;
 
 pub const PLAYER_SIZE: (f32, f32) = (320.0 / 5.0, 370.0 / 5.0);
 
@@ -19,11 +19,13 @@ pub struct PlayerPlugin;
 
 impl Plugin for PlayerPlugin {
     fn build(&self, app: &mut App) {
-        app.add_systems(Startup, system::spawn_player)
-            .add_systems(Update, system::confine_player_movement)
-            .add_systems(Update, system::player_movement)
-            .add_systems(Update, system::get_star)
-            .add_systems(Update, system::pigs_hit_player)
-            .add_systems(Update, system::confine_player_movement);
+        app.add_systems(Startup, systems::spawn_player)
+            // .add_systems(Update, systems::player_movement)
+            .add_systems(Update, systems::collect_star)
+            .add_systems(Update, systems::pig_hit_player)
+            .add_systems(
+                Update,
+                (systems::player_movement, systems::confine_player_movement).chain(),
+            );
     }
 }
