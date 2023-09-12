@@ -15,12 +15,12 @@ pub fn setup(mut commands: Commands, window_query: Query<&Window, With<PrimaryWi
 
 pub fn handler_game_over(
     mut game_over_event_reader: EventReader<GameOver>,
-    mut commands: Commands,
+    mut app_state_writer: ResMut<NextState<AppState>>,
 ) {
     for event in game_over_event_reader.iter() {
         info!("Booom!!! Game over!");
         info!("Your final score is {}.", event.score);
-        commands.insert_resource(NextState(Some(AppState::GameOver)));
+        app_state_writer.set(AppState::Game);
     }
 }
 
@@ -37,23 +37,24 @@ pub fn update_high_scores(
 }
 
 pub fn transition_to_game_state(
-    mut commands: Commands,
     kb_input: Res<Input<KeyCode>>,
     app_state: Res<State<AppState>>,
+    mut app_state_writer: ResMut<NextState<AppState>>,
+    mut simulation_state_writer: ResMut<NextState<SimulationState>>,
 ) {
     if kb_input.just_pressed(KeyCode::G) && app_state.get() != &AppState::Game {
-        commands.insert_resource(NextState(Some(AppState::Game)));
-        commands.insert_resource(NextState(Some(SimulationState::Running)));
+        app_state_writer.set(AppState::Game);
+        simulation_state_writer.set(SimulationState::Running);
         info!("Entered AppState::Game");
     }
 }
 pub fn transition_to_main_menu_state(
-    mut commands: Commands,
     kb_input: Res<Input<KeyCode>>,
     app_state: Res<State<AppState>>,
+    mut app_state_writer: ResMut<NextState<AppState>>,
 ) {
     if kb_input.just_pressed(KeyCode::M) && app_state.get() != &AppState::MainMenu {
-        commands.insert_resource(NextState(Some(AppState::MainMenu)));
+        app_state_writer.set(AppState::MainMenu);
         info!("Entered AppState::MainMenu");
     }
 }

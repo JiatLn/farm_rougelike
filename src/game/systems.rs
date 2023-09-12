@@ -3,18 +3,18 @@ use crate::resources::Score;
 use bevy::prelude::*;
 
 pub fn toggle_simulation(
-    mut commands: Commands,
     kb_input: Res<Input<KeyCode>>,
     simulation_state: Res<State<SimulationState>>,
+    mut simulation_state_writer: ResMut<NextState<SimulationState>>,
 ) {
     if kb_input.just_pressed(KeyCode::Space) {
         if simulation_state.get() == &SimulationState::Running {
-            commands.insert_resource(NextState(Some(SimulationState::Paused)));
+            simulation_state_writer.set(SimulationState::Paused);
             info!("Simulation Paused!");
         }
 
         if simulation_state.get() == &SimulationState::Paused {
-            commands.insert_resource(NextState(Some(SimulationState::Running)));
+            simulation_state_writer.set(SimulationState::Running);
             info!("Simulation Running!");
         }
     }
