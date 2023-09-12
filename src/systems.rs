@@ -20,7 +20,7 @@ pub fn handler_game_over(
     for event in game_over_event_reader.iter() {
         info!("Booom!!! Game over!");
         info!("Your final score is {}.", event.score);
-        app_state_writer.set(AppState::Game);
+        app_state_writer.set(AppState::MainMenu);
     }
 }
 
