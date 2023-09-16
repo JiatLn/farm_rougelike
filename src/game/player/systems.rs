@@ -2,28 +2,40 @@ use super::{Player, PLAYER_SIZE};
 use crate::{
     events::GameOver,
     game::pig::{Pig, PIG_SIZE},
-    game::star::{Star, STAR_SIZE},
-    resources::Score,
+    game::{
+        animation::{FrameTime, SpriteAnimation},
+        star::{Star, STAR_SIZE},
+    },
+    resources::{Graphis, Score},
 };
 use bevy::{prelude::*, window::PrimaryWindow};
 
 pub fn spawn_player(
     mut commands: Commands,
-    asset_server: Res<AssetServer>,
+    graphis: Res<Graphis>,
     window_query: Query<&Window, With<PrimaryWindow>>,
 ) {
     let window = window_query.single();
-    let player = SpriteBundle {
-        sprite: Sprite {
+    let player = SpriteSheetBundle {
+        sprite: TextureAtlasSprite {
+            index: 0,
             custom_size: Some(Vec2::new(PLAYER_SIZE.0, PLAYER_SIZE.1)),
             ..default()
         },
-        texture: asset_server.load("player.png"),
+        texture_atlas: graphis.texture_altas.clone(),
         transform: Transform::from_xyz(window.width() / 2.0, window.height() / 2.0, 0.0),
         ..default()
     };
 
-    commands.spawn((player, Player::new(300.0)));
+    commands.spawn((
+        player,
+        Player::new(300.0),
+        SpriteAnimation {
+            frame_time: 1.0 / 10.0,
+            len: 7,
+        },
+        FrameTime(0.0),
+    ));
 }
 
 pub fn despawn_player(mut commands: Commands, player_query: Query<Entity, With<Player>>) {

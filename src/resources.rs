@@ -1,5 +1,6 @@
 use bevy::{
-    prelude::Resource,
+    prelude::*,
+    sprite::TextureAtlas,
     time::{Timer, TimerMode},
 };
 
@@ -33,4 +34,9 @@ impl Default for StarSpawnTimer {
         let timer = Timer::from_seconds(1.0, TimerMode::Repeating);
         Self { timer }
     }
+}
+
+#[derive(Resource)]
+pub struct Graphis {
+    pub texture_altas: Handle<TextureAtlas>,
 }

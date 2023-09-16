@@ -26,6 +26,7 @@ fn main() {
         .add_state::<AppState>()
         .add_plugins(MainMenuPlugin)
         .add_plugins(GamePlugin)
+        .add_systems(PreStartup, systems::load_graphis_system)
         .add_systems(Startup, systems::setup)
         .add_systems(
             Update,

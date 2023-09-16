@@ -5,6 +5,7 @@ use crate::{
 };
 use bevy::prelude::*;
 
+mod animation;
 mod pig;
 mod player;
 mod star;
@@ -23,6 +24,10 @@ impl Plugin for GamePlugin {
             .add_systems(
                 Update,
                 systems::toggle_simulation.run_if(in_state(AppState::Game)),
+            )
+            .add_systems(
+                Update,
+                animation::animate_sprite.run_if(in_state(AppState::Game)),
             )
             .add_systems(OnExit(AppState::Game), systems::remove_score);
     }

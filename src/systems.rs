@@ -1,4 +1,9 @@
-use crate::{events::GameOver, game::SimulationState, resources::HighScores, AppState};
+use crate::{
+    events::GameOver,
+    game::SimulationState,
+    resources::{Graphis, HighScores},
+    AppState,
+};
 use bevy::{core_pipeline::clear_color::ClearColorConfig, prelude::*, window::PrimaryWindow};
 
 pub fn setup(mut commands: Commands, window_query: Query<&Window, With<PrimaryWindow>>) {
@@ -57,4 +62,21 @@ pub fn transition_to_main_menu_state(
         app_state_writer.set(AppState::MainMenu);
         info!("Entered AppState::MainMenu");
     }
+}
+
+pub fn load_graphis_system(
+    mut commands: Commands,
+    assert_server: Res<AssetServer>,
+    mut texture_altas: ResMut<Assets<TextureAtlas>>,
+) {
+    let texture = assert_server.load("gabe-idle-run.png");
+    let altas = TextureAtlas::from_grid(texture, Vec2::splat(24.0), 7, 1, None, None);
+
+    let handle_texture_atlas = texture_altas.add(altas);
+
+    let graphis = Graphis {
+        texture_altas: handle_texture_atlas,
+    };
+
+    commands.insert_resource(graphis);
 }

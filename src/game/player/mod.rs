@@ -1,8 +1,6 @@
-use bevy::prelude::*;
-
-use crate::AppState;
-
 use super::SimulationState;
+use crate::AppState;
+use bevy::prelude::*;
 
 mod systems;
 
